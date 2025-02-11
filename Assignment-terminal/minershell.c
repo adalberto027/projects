@@ -48,15 +48,19 @@ int main(int argc, char* argv[]) {
 	while(1) {			
 		/* BEGIN: TAKING INPUT */
 		bzero(line, sizeof(line));
-		// Leer entrada del usuario
-		printf("$ ");
-		scanf("%[^\n]", line);
-		getchar();
 
-		printf("Command entered: %s (remove this debug output later)\n", line);
+		// read input
+		printf("$ ");
+
+		fgets(line, sizeof(line), stdin);
+
+		// here if the user press enter it ask for a comand again
+		if (strlen(line) == 1) continue;
+
 		/* END: TAKING INPUT */
 
-		line[strlen(line)] = '\n'; //terminate with new line
+		line[strlen(line)] = '\0'; //terminate with new line
+		
 		tokens = tokenize(line);
    
        //do whatever you want with the commands, here we just print them
