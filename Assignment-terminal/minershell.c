@@ -40,7 +40,7 @@ char **tokenize(char *line)
 
 
 int main(int argc, char* argv[]) {
-	char  line[MAX_INPUT_SIZE];            
+	char  line[MAX_INPUT_SIZE]; // here we save the input           
 	char  **tokens;              
 	int i;
 
@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
 	while(1) {			
 		/* BEGIN: TAKING INPUT */
 		bzero(line, sizeof(line));
+		// Leer entrada del usuario
 		printf("$ ");
 		scanf("%[^\n]", line);
 		getchar();
