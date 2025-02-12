@@ -42,9 +42,7 @@ char **tokenize(char *line)
 
 
 int main(int argc, char* argv[]) {
-	char  line[MAX_INPUT_SIZE]; // here we save the input           
-	// Tokenizar input
-	char **tokens = tokenize(line);          
+	char  line[MAX_INPUT_SIZE]; // here we save the input                  
 	int i;
 
 
@@ -53,7 +51,7 @@ int main(int argc, char* argv[]) {
 		bzero(line, sizeof(line));
 
 		// read input
-		printf("$ ");
+		printf("minersh$ ");
 
 		fgets(line, sizeof(line), stdin);
 
@@ -76,10 +74,10 @@ int main(int argc, char* argv[]) {
 		if (tokens[0] != NULL && strcmp(tokens[0], "cd") == 0) {
 
 			if (tokens[1] == NULL) {
-				fprintf(stderr, "cd: missing argument\n");
+				fprintf(stderr, "Shell: Incorrect command\n");
 			} else {
 				if (chdir(tokens[1]) != 0) {
-					printf("Error: cd failed\n");
+					printf("Shell: Incorrect command\n");
 				}
 			}
 			continue; // in the case of cd we dont hace to execute fork "me"
