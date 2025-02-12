@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		else { // whit this we ensures the parent process waits for the child to finish, preventing zombie processes. "me"
-    w		aitpid(pid, NULL, 0);
+			aitpid(pid, NULL, 0);
 		}
 
 		// Freeing the allocated memory to avoid memory leaks "me"	
