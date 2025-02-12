@@ -41,7 +41,8 @@ char **tokenize(char *line)
 
 int main(int argc, char* argv[]) {
 	char  line[MAX_INPUT_SIZE]; // here we save the input           
-	char  **tokens;              
+	// Tokenizar input
+	char **tokens = tokenize(line);          
 	int i;
 
 
@@ -54,22 +55,56 @@ int main(int argc, char* argv[]) {
 
 		fgets(line, sizeof(line), stdin);
 
-		// here if the user press enter it ask for a comand again
+		// here if the user press enter it ask for a comand again "me"
 		if (strlen(line) == 1) continue;
 
 		/* END: TAKING INPUT */
 
 		line[strlen(line)] = '\0'; //terminate with new line
-		
-		tokens = tokenize(line);
-   
-       //do whatever you want with the commands, here we just print them
 
-		for(i=0;tokens[i]!=NULL;i++){
-			printf("found token %s (remove this debug output later)\n", tokens[i]);
+		tokens = tokenize(line); // tokenize the input "me"
+
+		//here we handel the exit command to close the shell "me"
+        if (tokens[0] != NULL && strcmp(tokens[0], "exit") == 0) {
+            printf("Exiting shell...\n");
+            break;
+        }
+
+		//the next part handel the cd case, we have to handel it different because it is not an executable "me"
+		if (tokens[0] != NULL && strcmp(tokens[0], "cd") == 0) {
+
+			if (tokens[1] == NULL) {
+				fprintf(stderr, "cd: missing argument\n");
+			} else {
+				if (chdir(tokens[1]) != 0) {
+					printf("Error: cd failed\n");
+				}
+			}
+			continue; // in the case of cd we dont hace to execute fork "me"
 		}
-       
-		// Freeing the allocated memory	
+
+		// this command create a child process "me"
+		pid_t pid = fork();
+
+		// PID > 0 -> child process, PID == 0 -> Parent process, PID < 0 -> Error at fork() "me"
+
+		// if fork fails we print an error and we avoid shell to crash "me"
+		if (pid < 0) {
+ 		   perror("fork failed");
+		}
+
+		if (pid == 0) { // child process "me"
+			if (execvp(tokens[0], tokens) == -1) {
+				printf("Error: The command could not be executed.\n");
+			}
+			exit(1);
+		}
+
+		else { // whit this we ensures the parent process waits for the child to finish, preventing zombie processes. "me"
+    w		aitpid(pid, NULL, 0);
+		}
+
+		// Freeing the allocated memory to avoid memory leaks "me"	
 		for(i=0;tokens[i]!=NULL;i++){
 			free(tokens[i]);
 		}
