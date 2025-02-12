@@ -42,7 +42,8 @@ char **tokenize(char *line)
 
 
 int main(int argc, char* argv[]) {
-	char  line[MAX_INPUT_SIZE]; // here we save the input                  
+	char  line[MAX_INPUT_SIZE]; // here we save the input  
+	char **tokens;                 
 	int i;
 
 
