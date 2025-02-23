@@ -4,13 +4,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <fcntl.h> // Task 1: Required for handling file redirection
+#include <fcntl.h> // Task-A: Enabling File Redirection in your Shell, added for file operations // here 1
 
 #define MAX_INPUT_SIZE 1024
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
 
-/* Splits the string by space and returns the array of tokens */
+/* Splits the string by space and returns the array of tokens
+*
+*/
 char **tokenize(char *line)
 {
   char **tokens = (char **)malloc(MAX_NUM_TOKENS * sizeof(char *));
@@ -38,112 +40,104 @@ char **tokenize(char *line)
   return tokens;
 }
 
+
 int main(int argc, char* argv[]) {
-	char  line[MAX_INPUT_SIZE]; // Here we store the input
+	char  line[MAX_INPUT_SIZE]; // here we save the input  
 	char **tokens;                 
 	int i;
 
-	while(1) {            
+
+	while(1) {			
 		/* BEGIN: TAKING INPUT */
 		bzero(line, sizeof(line));
 
-		// Read input
+		// read input
 		printf("minersh$ ");
+
 		fgets(line, sizeof(line), stdin);
 
-		// If the user presses enter, prompt again
+		// here if the user press enter it ask for a comand again "me"
 		if (strlen(line) == 1) continue;
 
 		/* END: TAKING INPUT */
-		line[strlen(line)] = '\0'; // Terminate with a new line
-		tokens = tokenize(line); // Tokenize the input
 
-		// Handle the exit command to close the shell
-		if (tokens[0] != NULL && strcmp(tokens[0], "exit") == 0) {
-			printf("Exiting shell...\n");
-			break;
-		}
+		line[strlen(line)] = '\0'; //terminate with new line
 
-		// Task 1: Output redirection to a file
-		int redirect_output = 0;
-		char *output_file = NULL;
-		for (i = 0; tokens[i] != NULL; i++) {
-			if (strcmp(tokens[i], ">") == 0) {
-				redirect_output = 1;
-				output_file = tokens[i + 1];
-				tokens[i] = NULL; // Remove redirection operator
-				break;
+		tokens = tokenize(line); // tokenize the input "me"
+
+		//here we handel the exit command to close the shell "me"
+        if (tokens[0] != NULL && strcmp(tokens[0], "exit") == 0) {
+            printf("Exiting shell...\n");
+            break;
+        }
+
+		//the next part handel the cd case, we have to handel it different because it is not an executable "me"
+		if (tokens[0] != NULL && strcmp(tokens[0], "cd") == 0) {
+
+			if (tokens[1] == NULL) {
+				fprintf(stderr, "Shell: Incorrect command\n");
+			} else {
+				if (chdir(tokens[1]) != 0) {
+					printf("Shell: Incorrect command\n");
+				}
 			}
+			continue; // in the case of cd we dont hace to execute fork "me"
 		}
 
-		// Task 2: Handling pipes
-		int pipefd[2];
-		int use_pipe = 0;
-		char **command2 = NULL;
-		for (i = 0; tokens[i] != NULL; i++) {
-			if (strcmp(tokens[i], "|") == 0) {
-				use_pipe = 1;
-				pipe(tokens);
-				tokens[i] = NULL;
-				command2 = &tokens[i + 1];
-				break;
-			}
-		}
+		// Task-A: Enabling File Redirection in your Shell, checking for ">" in tokens // here 1
+		int redirect_index = -1; // here 1
+		for (i = 0; tokens[i] != NULL; i++) { // here 1
+			if (strcmp(tokens[i], ">") == 0) { // here 1
+				redirect_index = i; // here 1
+				break; // here 1
+			} // here 1
+		} // here 1
 
-		// Create a child process
+		// this command create a child process "me"
 		pid_t pid = fork();
 
-		// PID > 0 -> child process, PID == 0 -> Parent process, PID < 0 -> Error in fork()
-		// If fork fails, print an error and prevent shell crash
+		// PID > 0 -> child process, PID == 0 -> Parent process, PID < 0 -> Error at fork() "me"
+
+		// if fork fails we print an error and we avoid shell to crash "me"
 		if (pid < 0) {
-			perror("fork failed");
+ 		   perror("fork failed");
 		}
 
-		if (pid == 0) { // Child process
-			if (redirect_output) { // Task 1: Output redirection
-				int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-				if (fd < 0) {
-					perror("open");
-					exit(1);
-				}
-				dup2(fd, STDOUT_FILENO);
-				dup2(fd, STDERR_FILENO);
-				close(fd);
-			}
-			if (use_pipe) { // Task 2: Pipe handling
-				dup2(pipefd[1], STDOUT_FILENO);
-				close(pipefd[0]);
-				close(pipefd[1]);
-			}
+		if (pid == 0) { // child process "me"
+			
+			// Task-A: Enabling File Redirection in your Shell, handling redirection // here 1
+			if (redirect_index != -1) { // here 1
+				if (tokens[redirect_index + 1] == NULL) { // here 1
+					fprintf(stderr, "Shell: No output file specified\n"); // here 1
+					exit(1); // here 1
+				} // here 1
+				int fd = open(tokens[redirect_index + 1], O_WRONLY | O_CREAT | O_TRUNC, 0644); // here 1
+				if (fd == -1) { // here 1
+					perror("Shell: Failed to open file"); // here 1
+					exit(1); // here 1
+				} // here 1
+				dup2(fd, STDOUT_FILENO); // here 1
+				dup2(fd, STDERR_FILENO); // Task-A: Enabling File Redirection in your Shell, redirecting stderr // here 1
+				close(fd); // here 1
+				tokens[redirect_index] = NULL; // Task-A: Enabling File Redirection in your Shell, removing ">" and filename // here 1
+			} // here 1
+
 			if (execvp(tokens[0], tokens) == -1) {
 				printf("Error: The command could not be executed.\n");
 			}
 			exit(1);
 		}
-		else { // Parent process
-			if (use_pipe) { // Task 2: Pipe handling in parent process
-				pid_t pid2 = fork();
-				if (pid2 == 0) {
-					dup2(pipefd[0], STDIN_FILENO);
-					close(pipefd[1]);
-					close(pipefd[0]);
-					if (execvp(command2[0], command2) == -1) {
-						printf("Error: The second command could not be executed.\n");
-					}
-					exit(1);
-				}
-				close(pipefd[0]);
-				close(pipefd[1]);
-				waitpid(pid2, NULL, 0);
-			}
+
+		else { // whit this we ensures the parent process waits for the child to finish, preventing zombie processes. "me"
 			waitpid(pid, NULL, 0);
 		}
 
-		// Free allocated memory to avoid memory leaks    
-		for(i=0; tokens[i] != NULL; i++){
+		// Freeing the allocated memory to avoid memory leaks "me"	
+		for(i=0;tokens[i]!=NULL;i++){
 			free(tokens[i]);
 		}
 		free(tokens);
+
 	}
 	return 0;
 }
