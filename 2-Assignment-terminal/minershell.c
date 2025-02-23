@@ -10,6 +10,11 @@
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
 
+// Function to print the unique error message // here 3
+void print_error() { // here 3
+    fprintf(stderr, "An error has occurred\n"); // here 3
+} // here 3
+
 /* Splits the string by space and returns the array of tokens
 *
 */
@@ -73,90 +78,94 @@ int main(int argc, char* argv[]) {
 		//the next part handel the cd case, we have to handel it different because it is not an executable "me"
 		if (tokens[0] != NULL && strcmp(tokens[0], "cd") == 0) {
 			if (tokens[1] == NULL) {
-				fprintf(stderr, "Shell: Incorrect command\n");
+				print_error(); // here 3
 			} else {
 				if (chdir(tokens[1]) != 0) {
-					printf("Shell: Incorrect command\n");
+					print_error(); // here 3
 				}
 			}
-			continue; // in the case of cd we dont hace to execute fork "me"
+			continue;
 		}
 
 		// Task-A: Enabling File Redirection in your Shell, checking for ">" in tokens // here 1
-		int redirect_index = -1; // here 1
-		for (i = 0; tokens[i] != NULL; i++) { // here 1
-			if (strcmp(tokens[i], ">") == 0) { // here 1
-				redirect_index = i; // here 1
-				break; // here 1
-			} // here 1
-		} // here 1
+		int redirect_index = -1;
+		for (i = 0; tokens[i] != NULL; i++) {
+			if (strcmp(tokens[i], ">") == 0) {
+				redirect_index = i;
+				break;
+			}
+		}
 
 		// Task-B: Enabling Inter-Process Communication via Pipes // here 2
-		int pipe_index = -1; // here 2
-		for (i = 0; tokens[i] != NULL; i++) { // here 2
-			if (strcmp(tokens[i], "|") == 0) { // here 2
-				pipe_index = i; // here 2
-				break; // here 2
-			} // here 2
-		} // here 2
+		int pipe_index = -1;
+		for (i = 0; tokens[i] != NULL; i++) {
+			if (strcmp(tokens[i], "|") == 0) {
+				pipe_index = i;
+				break;
+			}
+		}
 
-		if (pipe_index != -1) { // here 2
-			tokens[pipe_index] = NULL; // here 2
+		if (pipe_index != -1) {
+			tokens[pipe_index] = NULL;
 
-			int fd[2]; // here 2
-			if (pipe(fd) == -1) { // here 2
-				perror("pipe failed"); // here 2
-				continue; // here 2
-			} // here 2
+			int fd[2];
+			if (pipe(fd) == -1) {
+				print_error(); // here 3
+				continue;
+			}
 
-			pid_t pid1 = fork(); // here 2
-			if (pid1 == 0) { // here 2
-				close(fd[0]); // here 2
-				dup2(fd[1], STDOUT_FILENO); // here 2
-				close(fd[1]); // here 2
-				if (execvp(tokens[0], tokens) == -1) { // here 2
-					perror("execvp failed"); // here 2
-					exit(1); // here 2
-				} // here 2
-			} // here 2
+			pid_t pid1 = fork();
+			if (pid1 == 0) {
+				close(fd[0]);
+				dup2(fd[1], STDOUT_FILENO);
+				close(fd[1]);
+				if (execvp(tokens[0], tokens) == -1) {
+					print_error(); // here 3
+					exit(1);
+				}
+			}
 
-			pid_t pid2 = fork(); // here 2
-			if (pid2 == 0) { // here 2
-				close(fd[1]); // here 2
-				dup2(fd[0], STDIN_FILENO); // here 2
-				close(fd[0]); // here 2
-				if (execvp(tokens[pipe_index + 1], &tokens[pipe_index + 1]) == -1) { // here 2
-					perror("execvp failed"); // here 2
-					exit(1); // here 2
-				} // here 2
-			} // here 2
+			pid_t pid2 = fork();
+			if (pid2 == 0) {
+				close(fd[1]);
+				dup2(fd[0], STDIN_FILENO);
+				close(fd[0]);
+				if (execvp(tokens[pipe_index + 1], &tokens[pipe_index + 1]) == -1) {
+					print_error(); // here 3
+					exit(1);
+				}
+			}
 
-			close(fd[0]); // here 2
-			close(fd[1]); // here 2
-			waitpid(pid1, NULL, 0); // here 2
-			waitpid(pid2, NULL, 0); // here 2
-			continue; // here 2
-		} // here 2
+			close(fd[0]);
+			close(fd[1]);
+			waitpid(pid1, NULL, 0);
+			waitpid(pid2, NULL, 0);
+			continue;
+		}
 
 		// this command create a child process "me"
 		pid_t pid = fork();
 
 		// if fork fails we print an error and we avoid shell to crash "me"
 		if (pid < 0) {
- 		   perror("fork failed");
+ 		   print_error(); // here 3
 		}
 
 		if (pid == 0) { // child process "me"
-			if (redirect_index != -1) { // here 1
-				int fd = open(tokens[redirect_index + 1], O_WRONLY | O_CREAT | O_TRUNC, 0644); // here 1
-				dup2(fd, STDOUT_FILENO); // here 1
-				dup2(fd, STDERR_FILENO); // here 1
-				close(fd); // here 1
-				tokens[redirect_index] = NULL; // here 1
-			} // here 1
+			if (redirect_index != -1) {
+				int fd = open(tokens[redirect_index + 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+				if (fd == -1) {
+					print_error(); // here 3
+					exit(1);
+				}
+				dup2(fd, STDOUT_FILENO);
+				dup2(fd, STDERR_FILENO);
+				close(fd);
+				tokens[redirect_index] = NULL;
+			}
 
 			if (execvp(tokens[0], tokens) == -1) {
-				printf("Error: The command could not be executed.\n");
+				print_error(); // here 3
 			}
 			exit(1);
 		}
