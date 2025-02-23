@@ -62,22 +62,25 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        int redirect_index = -1, pipe_index = -1;
+        int redirect_index = -1, pipe_index = -1, background = 0;
+
         for (i = 0; tokens[i] != NULL; i++) {
             if (strcmp(tokens[i], ">") == 0) {
                 redirect_index = i;
             } else if (strcmp(tokens[i], "|") == 0) {
                 pipe_index = i;
+            } else if (strcmp(tokens[i], "&") == 0) {  // Detectar "&"
+                background = 1;
+                tokens[i] = NULL;  // Eliminar "&" del comando
             }
         }
 
-        // ✅ Bug Fix: Detect if pipe "|" is at the end without a second command
         if (pipe_index != -1 && tokens[pipe_index + 1] == NULL) {
-            print_error();  // Mostrar error si "|" está al final
+            print_error();
             continue;
         }
 
-        if (pipe_index != -1) {  
+        if (pipe_index != -1) {
             tokens[pipe_index] = NULL;
 
             int fd[2];
@@ -87,7 +90,7 @@ int main(int argc, char *argv[]) {
             }
 
             pid_t pid1 = fork();
-            if (pid1 == 0) {  
+            if (pid1 == 0) {
                 close(fd[0]);
                 dup2(fd[1], STDOUT_FILENO);
                 close(fd[1]);
@@ -98,20 +101,20 @@ int main(int argc, char *argv[]) {
             }
 
             pid_t pid2 = fork();
-            if (pid2 == 0) {  
+            if (pid2 == 0) {
                 close(fd[1]);
                 dup2(fd[0], STDIN_FILENO);
                 close(fd[0]);
 
-                if (redirect_index != -1) {  
-                    int fd_out = open(tokens[redirect_index + 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);  
+                if (redirect_index != -1) {
+                    int fd_out = open(tokens[redirect_index + 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
                     if (fd_out == -1) {
                         print_error();
                         exit(1);
                     }
-                    dup2(fd_out, STDOUT_FILENO);  
+                    dup2(fd_out, STDOUT_FILENO);
                     close(fd_out);
-                    tokens[redirect_index] = NULL;  
+                    tokens[redirect_index] = NULL;
                 }
 
                 if (execvp(tokens[pipe_index + 1], &tokens[pipe_index + 1]) == -1) {
@@ -149,7 +152,9 @@ int main(int argc, char *argv[]) {
             }
             exit(1);
         } else {
-            waitpid(pid, NULL, 0);
+            if (!background) {  // Espera solo si no es en segundo plano
+                waitpid(pid, NULL, 0);
+            }
         }
 
         for (i = 0; tokens[i] != NULL; i++) {
