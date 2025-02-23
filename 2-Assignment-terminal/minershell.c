@@ -13,7 +13,9 @@
 void print_error() {
     fprintf(stderr, "An error has occurred\n");
 }
-
+/* Splits the string by space and returns the array of tokens
+*
+*/
 char **tokenize(char *line) {
     char **tokens = (char **)malloc(MAX_NUM_TOKENS * sizeof(char *));
     char *token = (char *)malloc(MAX_TOKEN_SIZE * sizeof(char));
@@ -64,14 +66,15 @@ int main(int argc, char *argv[]) {
 
         int redirect_index = -1, pipe_index = -1, background = 0;
 
+		// Identifies special operators: redirection, pipes, and background execution
         for (i = 0; tokens[i] != NULL; i++) {
             if (strcmp(tokens[i], ">") == 0) {
                 redirect_index = i;
             } else if (strcmp(tokens[i], "|") == 0) {
                 pipe_index = i;
-            } else if (strcmp(tokens[i], "&") == 0) {  // Detectar "&"
+            } else if (strcmp(tokens[i], "&") == 0) {
                 background = 1;
-                tokens[i] = NULL;  // Eliminar "&" del comando
+                tokens[i] = NULL;
             }
         }
 
@@ -80,6 +83,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+		// Handles pipes (|) for inter-process communication
         if (pipe_index != -1) {
             tokens[pipe_index] = NULL;
 
@@ -130,12 +134,14 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+		// Creates a child process to execute commands
         pid_t pid = fork();
         if (pid < 0) {
             print_error();
         }
 
         if (pid == 0) {
+			// Output redirection (>)
             if (redirect_index != -1) {
                 int fd = open(tokens[redirect_index + 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
                 if (fd == -1) {
@@ -152,11 +158,12 @@ int main(int argc, char *argv[]) {
             }
             exit(1);
         } else {
-            if (!background) {  // Espera solo si no es en segundo plano
+            if (!background) {
                 waitpid(pid, NULL, 0);
             }
         }
 
+		// Free token memory
         for (i = 0; tokens[i] != NULL; i++) {
             free(tokens[i]);
         }
