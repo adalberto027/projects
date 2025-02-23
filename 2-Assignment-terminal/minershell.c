@@ -46,7 +46,6 @@ int main(int argc, char* argv[]) {
 	char **tokens;                 
 	int i;
 
-
 	while(1) {			
 		/* BEGIN: TAKING INPUT */
 		bzero(line, sizeof(line));
@@ -73,7 +72,6 @@ int main(int argc, char* argv[]) {
 
 		//the next part handel the cd case, we have to handel it different because it is not an executable "me"
 		if (tokens[0] != NULL && strcmp(tokens[0], "cd") == 0) {
-
 			if (tokens[1] == NULL) {
 				fprintf(stderr, "Shell: Incorrect command\n");
 			} else {
@@ -93,10 +91,55 @@ int main(int argc, char* argv[]) {
 			} // here 1
 		} // here 1
 
+		// Task-B: Enabling Inter-Process Communication via Pipes // here 2
+		int pipe_index = -1; // here 2
+		for (i = 0; tokens[i] != NULL; i++) { // here 2
+			if (strcmp(tokens[i], "|") == 0) { // here 2
+				pipe_index = i; // here 2
+				break; // here 2
+			} // here 2
+		} // here 2
+
+		if (pipe_index != -1) { // here 2
+			tokens[pipe_index] = NULL; // here 2
+
+			int fd[2]; // here 2
+			if (pipe(fd) == -1) { // here 2
+				perror("pipe failed"); // here 2
+				continue; // here 2
+			} // here 2
+
+			pid_t pid1 = fork(); // here 2
+			if (pid1 == 0) { // here 2
+				close(fd[0]); // here 2
+				dup2(fd[1], STDOUT_FILENO); // here 2
+				close(fd[1]); // here 2
+				if (execvp(tokens[0], tokens) == -1) { // here 2
+					perror("execvp failed"); // here 2
+					exit(1); // here 2
+				} // here 2
+			} // here 2
+
+			pid_t pid2 = fork(); // here 2
+			if (pid2 == 0) { // here 2
+				close(fd[1]); // here 2
+				dup2(fd[0], STDIN_FILENO); // here 2
+				close(fd[0]); // here 2
+				if (execvp(tokens[pipe_index + 1], &tokens[pipe_index + 1]) == -1) { // here 2
+					perror("execvp failed"); // here 2
+					exit(1); // here 2
+				} // here 2
+			} // here 2
+
+			close(fd[0]); // here 2
+			close(fd[1]); // here 2
+			waitpid(pid1, NULL, 0); // here 2
+			waitpid(pid2, NULL, 0); // here 2
+			continue; // here 2
+		} // here 2
+
 		// this command create a child process "me"
 		pid_t pid = fork();
-
-		// PID > 0 -> child process, PID == 0 -> Parent process, PID < 0 -> Error at fork() "me"
 
 		// if fork fails we print an error and we avoid shell to crash "me"
 		if (pid < 0) {
@@ -104,22 +147,12 @@ int main(int argc, char* argv[]) {
 		}
 
 		if (pid == 0) { // child process "me"
-			
-			// Task-A: Enabling File Redirection in your Shell, handling redirection // here 1
 			if (redirect_index != -1) { // here 1
-				if (tokens[redirect_index + 1] == NULL) { // here 1
-					fprintf(stderr, "Shell: No output file specified\n"); // here 1
-					exit(1); // here 1
-				} // here 1
 				int fd = open(tokens[redirect_index + 1], O_WRONLY | O_CREAT | O_TRUNC, 0644); // here 1
-				if (fd == -1) { // here 1
-					perror("Shell: Failed to open file"); // here 1
-					exit(1); // here 1
-				} // here 1
 				dup2(fd, STDOUT_FILENO); // here 1
-				dup2(fd, STDERR_FILENO); // Task-A: Enabling File Redirection in your Shell, redirecting stderr // here 1
+				dup2(fd, STDERR_FILENO); // here 1
 				close(fd); // here 1
-				tokens[redirect_index] = NULL; // Task-A: Enabling File Redirection in your Shell, removing ">" and filename // here 1
+				tokens[redirect_index] = NULL; // here 1
 			} // here 1
 
 			if (execvp(tokens[0], tokens) == -1) {
@@ -128,16 +161,15 @@ int main(int argc, char* argv[]) {
 			exit(1);
 		}
 
-		else { // whit this we ensures the parent process waits for the child to finish, preventing zombie processes. "me"
+		else {
 			waitpid(pid, NULL, 0);
 		}
 
-		// Freeing the allocated memory to avoid memory leaks "me"	
+		// Freeing the allocated memory to avoid memory leaks "me"
 		for(i=0;tokens[i]!=NULL;i++){
 			free(tokens[i]);
 		}
 		free(tokens);
-
 	}
 	return 0;
 }
