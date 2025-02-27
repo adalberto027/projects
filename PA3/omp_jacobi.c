@@ -3,155 +3,82 @@
 #include <stdlib.h>
 #include <omp.h>
 
-int main ( )
-{
-  double *b;
-  double d;
-  int i;
-  int it;
-  int m;
-  int n;
-  double r;
-  double t;
-  double *x;
-  double *xnew;
-  double start, end;
+int main() {
+    double *b, *x, *xnew;
+    double d, r, t;
+    int i, it, m = 10000, n = 50000;
+    double start, end;
 
-  m = 10000;
-  n = 50000;
+    b = (double *)malloc(n * sizeof(double));
+    x = (double *)malloc(n * sizeof(double));
+    xnew = (double *)malloc(n * sizeof(double));
 
-  b = ( double * ) malloc ( n * sizeof ( double ) );
-  x = ( double * ) malloc ( n * sizeof ( double ) );
-  xnew = ( double * ) malloc ( n * sizeof ( double ) );
+    printf("\nJACOBI_OPENMP_OPTIMIZED:\nC/OpenMP optimized version\n");
+    printf("Jacobi iteration to solve A*x=b.\n\n");
+    printf("Number of variables  N = %d\n", n);
+    printf("Number of iterations M = %d\n\n");
 
-  printf ( "\n" );
-  printf ( "JACOBI_OPENMP:\n" );
-  printf ( "  C/OpenMP version\n" );
-  printf ( "  Jacobi iteration to solve A*x=b.\n" );
-  printf ( "\n" );
-  printf ( "  Number of variables  N = %d\n", n );
-  printf ( "  Number of iterations M = %d\n", m );
-  printf ( "\n" );
+    // Initialize vectors
+    #pragma omp parallel for
+    for (i = 0; i < n; i++) {
+        b[i] = 0.0;
+        x[i] = 0.0;
+    }
+    b[n - 1] = (double)(n + 1);
 
-# pragma omp parallel private ( i )
-  {
-/*
-  Set up the right hand side.
-*/
-# pragma omp for
-    for ( i = 0; i < n; i++ )
-    {
-      b[i] = 0.0;
+    start = omp_get_wtime();
+    for (it = 0; it < m; it++) {
+        // Jacobi update
+        #pragma omp parallel for schedule(static)
+        for (i = 0; i < n; i++) {
+            xnew[i] = b[i];
+            if (i > 0) xnew[i] += x[i - 1];
+            if (i < n - 1) xnew[i] += x[i + 1];
+            xnew[i] /= 2.0;
+        }
+
+        // Compute the difference using reduction instead of critical
+        d = 0.0;
+        #pragma omp parallel for reduction(+:d) schedule(static)
+        for (i = 0; i < n; i++) {
+            d += pow(x[i] - xnew[i], 2);
+        }
+
+        // Overwrite old solution
+        #pragma omp parallel for schedule(static)
+        for (i = 0; i < n; i++) {
+            x[i] = xnew[i];
+        }
+
+        // Compute residual using reduction
+        r = 0.0;
+        #pragma omp parallel for reduction(+:r) schedule(static)
+        for (i = 0; i < n; i++) {
+            t = b[i] - 2.0 * x[i];
+            if (i > 0) t += x[i - 1];
+            if (i < n - 1) t += x[i + 1];
+            r += t * t;
+        }
+    }
+    end = omp_get_wtime();
+    printf("Time for jacobi iteration: %f seconds\n", end - start);
+
+    // Print part of the final solution
+    printf("\nPart of final solution estimate:\n\n");
+    for (i = 0; i < 10; i++) {
+        printf("  %8d  %14.6g\n", i, x[i]);
+    }
+    printf("...\n");
+    for (i = n - 11; i < n; i++) {
+        printf("  %8d  %14.6g\n", i, x[i]);
     }
 
-    b[n-1] = ( double ) ( n + 1 );
-/*
-  Initialize the solution estimate to 0.
-  Exact solution is (1,2,3,...,N).
-*/
-# pragma omp for
-    for ( i = 0; i < n; i++ )
-    {
-      x[i] = 0.0;
-    }
+    // Free memory
+    free(b);
+    free(x);
+    free(xnew);
 
-  }
-/*
-  Iterate M times.
-*/
-  start = omp_get_wtime();
-  for ( it = 0; it < m; it++ )
-  {
-# pragma omp parallel private ( i, t )
-    {
-/*
-  Jacobi update.
-*/
-# pragma omp for
-      for ( i = 0; i < n; i++ )
-      {
-        xnew[i] = b[i];
-        if ( 0 < i )
-        {
-          xnew[i] = xnew[i] + x[i-1];
-        }
-        if ( i < n - 1 )
-        {
-          xnew[i] = xnew[i] + x[i+1];
-        }
-        xnew[i] = xnew[i] / 2.0;
-      }
-/*
-  Difference.
-*/
-      d = 0.0;
-#pragma omp for
-      for ( i = 0; i < n; i++ )
-      {
-	#pragma omp critical
-        d = d + pow ( x[i] - xnew[i], 2 );
-      }
-/*
-  Overwrite old solution.
-*/
-# pragma omp for
-      for ( i = 0; i < n; i++ )
-      {
-        x[i] = xnew[i];
-      }
-/*
-  Residual.
-*/
-      r = 0.0;
-#pragma omp for
-      for ( i = 0; i < n; i++ )
-      {
-        t = b[i] - 2.0 * x[i];
-        if ( 0 < i )
-        {
-          t = t + x[i-1];
-        }
-        if ( i < n - 1 )
-        {
-          t = t + x[i+1];
-        }
-        #pragma omp critical
-        r = r + t * t;
-      }
+    printf("\nJACOBI_OPENMP_OPTIMIZED:\nNormal end of execution.\n");
 
-    }
-
-  }
-  end = omp_get_wtime();
-  printf("Time for jacobi iteration: %f seconds\n", end-start);
-/*
-  Write part of final estimate.
-*/
-  printf ( "\n" );
-  printf ( "  Part of final solution estimate:\n" );
-  printf ( "\n" );
-  for ( i = 0; i < 10; i++ )
-  {
-    printf ( "  %8d  %14.6g\n", i, x[i] );
-  }
-  printf ( "...\n" );
-  for ( i = n - 11; i < n; i++ )
-  {
-    printf ( "  %8d  %14.6g\n", i, x[i] );
-  }
-/*
-  Free memory.
-*/
-  free ( b );
-  free ( x );
-  free ( xnew );
-/*
-  Terminate.
-*/
-  printf ( "\n" );
-  printf ( "JACOBI_OPENMP:\n" );
-  printf ( "  Normal end of execution.\n" );
-
-  return 0;
+    return 0;
 }
-
