@@ -14,12 +14,12 @@ int main() {
     x = (double *)malloc(n * sizeof(double));
     xnew = (double *)malloc(n * sizeof(double));
 
-    printf("\nJACOBI_OPENMP_MODIFIED:\nOptimized C/OpenMP version\n");
+    printf("\nJACOBI_OPENMP_OPTIMIZED:\nC/OpenMP optimized version\n");
     printf("Jacobi iteration to solve A*x=b.\n\n");
     printf("Number of variables  N = %d\n", n);
     printf("Number of iterations M = %d\n\n");
 
-    // Inicialización de datos (fuera del paralelismo)
+    // Inicialización de datos
     for (i = 0; i < n; i++) {
         b[i] = 0.0;
         x[i] = 0.0;
@@ -29,20 +29,16 @@ int main() {
     start = omp_get_wtime();
     for (it = 0; it < m; it++) {
 
-        // Jacobi update con schedule dinámico para mejorar balanceo
+        // Jacobi update con schedule dinámico
         #pragma omp parallel for schedule(dynamic, 500) private(i)
         for (i = 0; i < n; i++) {
             xnew[i] = b[i];
-            if (i > 0) {
-                xnew[i] += x[i - 1];
-            }
-            if (i < n - 1) {
-                xnew[i] += x[i + 1];
-            }
+            if (i > 0) xnew[i] += x[i - 1];
+            if (i < n - 1) xnew[i] += x[i + 1];
             xnew[i] /= 2.0;
         }
 
-        // Cálculo de diferencia usando reducción
+        // Cálculo de diferencia con reducción
         d = 0.0;
         #pragma omp parallel for reduction(+:d) private(i)
         for (i = 0; i < n; i++) {
@@ -55,17 +51,13 @@ int main() {
             x[i] = xnew[i];
         }
 
-        // Cálculo del residuo
+        // Cálculo del residuo con reducción
         r = 0.0;
         #pragma omp parallel for reduction(+:r) private(i, t)
         for (i = 0; i < n; i++) {
             t = b[i] - 2.0 * x[i];
-            if (i > 0) {
-                t += x[i - 1];
-            }
-            if (i < n - 1) {
-                t += x[i + 1];
-            }
+            if (i > 0) t += x[i - 1];
+            if (i < n - 1) t += x[i + 1];
             r += t * t;
         }
     }
@@ -87,7 +79,7 @@ int main() {
     free(x);
     free(xnew);
 
-    printf("\nJACOBI_OPENMP_MODIFIED:\nExecution finished successfully.\n");
+    printf("\nJACOBI_OPENMP_OPTIMIZED:\nExecution finished successfully.\n");
 
     return 0;
 }
