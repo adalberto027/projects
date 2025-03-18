@@ -9,7 +9,7 @@ int main() {
     int i, it, m = 10000, n = 50000;
     double start, end;
 
-    // Asignación de memoria
+    // Memory allocation
     b = (double *)malloc(n * sizeof(double));
     x = (double *)malloc(n * sizeof(double));
     xnew = (double *)malloc(n * sizeof(double));
@@ -19,7 +19,7 @@ int main() {
     printf("Number of variables  N = %d\n", n);
     printf("Number of iterations M = %d\n\n");
 
-    // Inicialización de datos
+    // Data initialization
     for (i = 0; i < n; i++) {
         b[i] = 0.0;
         x[i] = 0.0;
@@ -29,7 +29,7 @@ int main() {
     start = omp_get_wtime();
     for (it = 0; it < m; it++) {
 
-        // Jacobi update con schedule dinámico
+        // Jacobi update with dynamic scheduling
         #pragma omp parallel for schedule(dynamic, 500) private(i)
         for (i = 0; i < n; i++) {
             xnew[i] = b[i];
@@ -38,20 +38,20 @@ int main() {
             xnew[i] /= 2.0;
         }
 
-        // Cálculo de diferencia con reducción
+        // Compute difference with reduction
         d = 0.0;
         #pragma omp parallel for reduction(+:d) private(i)
         for (i = 0; i < n; i++) {
             d += pow(x[i] - xnew[i], 2);
         }
 
-        // Actualizar la solución
+        // Update the solution
         #pragma omp parallel for schedule(dynamic, 500) private(i)
         for (i = 0; i < n; i++) {
             x[i] = xnew[i];
         }
 
-        // Cálculo del residuo con reducción
+        // Compute residual with reduction
         r = 0.0;
         #pragma omp parallel for reduction(+:r) private(i, t)
         for (i = 0; i < n; i++) {
@@ -64,7 +64,7 @@ int main() {
     end = omp_get_wtime();
     printf("Time for jacobi iteration: %f seconds\n", end - start);
 
-    // Imprimir parte de la solución final
+    // Print part of the final solution
     printf("\nPart of final solution estimate:\n");
     for (i = 0; i < 10; i++) {
         printf("  %8d  %14.6g\n", i, x[i]);
@@ -74,7 +74,7 @@ int main() {
         printf("  %8d  %14.6g\n", i, x[i]);
     }
 
-    // Liberar memoria
+    // Free memory
     free(b);
     free(x);
     free(xnew);
