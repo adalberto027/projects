@@ -40,7 +40,6 @@ int cleanup() {
 
 char *alloc(int size) {
     if (size <= 0 || size % MINALLOC != 0 || size > PAGESIZE) {
-        printf("Invalid allocation request: %d bytes\n", size);
         return NULL;
     }
     
@@ -66,23 +65,19 @@ char *alloc(int size) {
                     free_list = curr->next;
                 }
             }
-            printf("Allocating %d bytes at: %p\n", size, (void *)((char *)curr + sizeof(FreeBlock)));
             return (char *)((char *)curr + sizeof(FreeBlock));
         }
         prev = curr;
         curr = curr->next;
     }
-    printf("Allocation failed for %d bytes\n", size);
     return NULL;
 }
 
 void dealloc(char *ptr) {
     if (!ptr || ptr < (char *)memory_page || ptr >= (char *)memory_page + PAGESIZE) {
-        printf("Invalid dealloc request at: %p\n", ptr);
         return;
     }
     
-    printf("Freeing memory at: %p\n", ptr);
     FreeBlock *block = (FreeBlock *)((char *)ptr - sizeof(FreeBlock));
     block->next = free_list;
     free_list = block;
