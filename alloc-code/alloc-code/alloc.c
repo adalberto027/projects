@@ -40,18 +40,20 @@ int cleanup() {
 
 char *alloc(int size) {
     if (size <= 0 || size % MINALLOC != 0 || size > PAGESIZE) {
+        printf("Invalid allocation request: %d bytes\n", size);
         return NULL;
     }
-    
+
     FreeBlock *prev = NULL;
     FreeBlock *curr = free_list;
+
     while (curr) {
         if (curr->size >= size) {
             if (curr->size > size + sizeof(FreeBlock)) {
                 FreeBlock *new_block = (FreeBlock *)((char *)curr + sizeof(FreeBlock) + size);
                 new_block->size = curr->size - size - sizeof(FreeBlock);
                 new_block->next = curr->next;
-                
+
                 if (prev) {
                     prev->next = new_block;
                 } else {
@@ -65,23 +67,29 @@ char *alloc(int size) {
                     free_list = curr->next;
                 }
             }
+
+            printf("Allocated %d bytes at: %p\n", size, (void *)((char *)curr + sizeof(FreeBlock)));
             return (char *)((char *)curr + sizeof(FreeBlock));
         }
         prev = curr;
         curr = curr->next;
     }
+    
+    printf("Allocation failed for %d bytes\n", size);
     return NULL;
 }
 
 void dealloc(char *ptr) {
     if (!ptr || ptr < (char *)memory_page || ptr >= (char *)memory_page + PAGESIZE) {
+        printf("Invalid dealloc request at: %p\n", ptr);
         return;
     }
-    
+
+    printf("Freeing memory at: %p\n", ptr);
     FreeBlock *block = (FreeBlock *)((char *)ptr - sizeof(FreeBlock));
     block->next = free_list;
     free_list = block;
-    
+
     // Merge adjacent free blocks
     FreeBlock *current = free_list;
     while (current && current->next) {
