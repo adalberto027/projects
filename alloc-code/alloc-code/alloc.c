@@ -6,9 +6,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define PAGE_SIZE 4096
-#define MIN_ALLOC_SIZE 8
-
 typedef struct FreeBlock {
     size_t size;
     struct FreeBlock *next;
@@ -18,31 +15,32 @@ static void *memory_page = NULL;
 static FreeBlock *free_list = NULL;
 
 int init_alloc() {
-    memory_page = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    memory_page = mmap(NULL, PAGESIZE, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (memory_page == MAP_FAILED) {
         perror("mmap failed");
         return -1;
     }
     free_list = (FreeBlock *)memory_page;
-    free_list->size = PAGE_SIZE - sizeof(FreeBlock);
+    free_list->size = PAGESIZE - sizeof(FreeBlock);
     free_list->next = NULL;
     return 0;
 }
 
 int cleanup() {
     if (memory_page) {
-        if (munmap(memory_page, PAGE_SIZE) == 0) {
+        if (munmap(memory_page, PAGESIZE) == 0) {
             memory_page = NULL;
             free_list = NULL;
-            return 0; // Éxito
+            return 0; // Success
         }
-        return -1; // Error en munmap
+        return -1; // Error in munmap
     }
-    return 0; // Nada que limpiar
+    return 0; // Nothing to clean up
 }
 
-void *alloc(int size) {
-    if (size <= 0 || size % MIN_ALLOC_SIZE != 0) {
+char *alloc(int size) {
+    if (size <= 0 || size % MINALLOC != 0 || size > PAGESIZE) {
+        printf("Invalid allocation request: %d bytes\n", size);
         return NULL;
     }
     
@@ -68,19 +66,23 @@ void *alloc(int size) {
                     free_list = curr->next;
                 }
             }
-            return (void *)((char *)curr + sizeof(FreeBlock));
+            printf("Allocating %d bytes at: %p\n", size, (void *)((char *)curr + sizeof(FreeBlock)));
+            return (char *)((char *)curr + sizeof(FreeBlock));
         }
         prev = curr;
         curr = curr->next;
     }
+    printf("Allocation failed for %d bytes\n", size);
     return NULL;
 }
 
-void dealloc(void *ptr) {
-    if (!ptr || ptr < memory_page || ptr >= (void *)((char *)memory_page + PAGE_SIZE)) {
+void dealloc(char *ptr) {
+    if (!ptr || ptr < (char *)memory_page || ptr >= (char *)memory_page + PAGESIZE) {
+        printf("Invalid dealloc request at: %p\n", ptr);
         return;
     }
     
+    printf("Freeing memory at: %p\n", ptr);
     FreeBlock *block = (FreeBlock *)((char *)ptr - sizeof(FreeBlock));
     block->next = free_list;
     free_list = block;
