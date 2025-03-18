@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <string.h>
 
-#define PAGE_SIZE 4096  // standard page size (4KB)
+#define PAGE_SIZE 4096  // 4KB
 
 int main() {
-    // print process ID
     printf("Process running. PID: %d\n", getpid());
 
-    // memory map an anonymous 4KB page
+    // allocate a 4KB
     void *mapped_mem = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (mapped_mem == MAP_FAILED) {
         perror("mmap failed");
@@ -17,12 +17,19 @@ int main() {
     }
 
     printf("Memory mapped at address: %p\n", mapped_mem);
-    printf("Press Enter to exit...\n");
 
-    // wait for a user input
+    // wait before writing to memory
+    printf("Press Enter to write data into memory...\n");
     getchar();
 
-    // clean up the mapped memory
+    // write data into the memory page
+    strcpy((char *)mapped_mem, "Hello, mmap!");
+
+    // wait again to observe memory usage after writing
+    printf("Data written. Press Enter to exit...\n");
+    getchar();
+
+    // Cleanup
     munmap(mapped_mem, PAGE_SIZE);
     return 0;
 }
