@@ -1,6 +1,13 @@
 #include "alloc.h"
+#include <sys/mman.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 
-// Data structure to track memory blocks
+#define PAGESIZE 4096
+#define MINALLOC 8
+
+// Estructura para gestionar los bloques de memoria
 struct mem_block {
     int offset;
     int size;
@@ -8,17 +15,17 @@ struct mem_block {
     struct mem_block *next;
 };
 
-static char *memory = NULL; // pointer to 4KB memory
+static char *memory = NULL;
 static struct mem_block *head = NULL;
 
-// Initialize memory manager
+// Inicializa el administrador de memoria
 int init_alloc() {
     memory = mmap(NULL, PAGESIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
     if (memory == MAP_FAILED)
         return -1;
 
-    head = malloc(sizeof(struct mem_block));
-    if (!head)
+    head = mmap(NULL, sizeof(struct mem_block), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+    if (head == MAP_FAILED)
         return -1;
 
     head->offset = 0;
@@ -29,13 +36,13 @@ int init_alloc() {
     return 0;
 }
 
-// Cleanup memory manager
+// Libera el administrador de memoria
 int cleanup() {
     struct mem_block *temp;
     while (head) {
         temp = head;
         head = head->next;
-        free(temp);
+        munmap(temp, sizeof(struct mem_block));
     }
 
     if (munmap(memory, PAGESIZE) == -1)
@@ -44,7 +51,22 @@ int cleanup() {
     return 0;
 }
 
-// Allocate memory
+// Fusiona bloques libres adyacentes
+void merge_free_blocks() {
+    struct mem_block *current = head;
+    while (current && current->next) {
+        if (current->free && current->next->free) {
+            struct mem_block *next_block = current->next;
+            current->size += next_block->size;
+            current->next = next_block->next;
+            munmap(next_block, sizeof(struct mem_block));
+        } else {
+            current = current->next;
+        }
+    }
+}
+
+// Asigna memoria
 char *alloc(int size) {
     if (size <= 0 || size % MINALLOC != 0)
         return NULL;
@@ -52,9 +74,9 @@ char *alloc(int size) {
     struct mem_block *current = head;
     while (current) {
         if (current->free && current->size >= size) {
-            if (current->size > size) {
-                struct mem_block *new_block = malloc(sizeof(struct mem_block));
-                if (!new_block)
+            if (current->size > size + sizeof(struct mem_block)) {
+                struct mem_block *new_block = mmap(NULL, sizeof(struct mem_block), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+                if (new_block == MAP_FAILED)
                     return NULL;
 
                 new_block->offset = current->offset + size;
@@ -76,23 +98,7 @@ char *alloc(int size) {
     return NULL;
 }
 
-// Merge adjacent free blocks
-void merge_free_blocks() {
-    struct mem_block *current = head;
-
-    while (current && current->next) {
-        if (current->free && current->next->free) {
-            struct mem_block *next_block = current->next;
-            current->size += next_block->size;
-            current->next = next_block->next;
-            free(next_block);
-        } else {
-            current = current->next;
-        }
-    }
-}
-
-// Deallocate memory
+// Libera memoria asignada
 void dealloc(char *ptr) {
     if (!ptr || ptr < memory || ptr >= memory + PAGESIZE)
         return;
