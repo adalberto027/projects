@@ -29,12 +29,16 @@ int init_alloc() {
     return 0;
 }
 
-void cleanup() {
+int cleanup() {
     if (memory_page) {
-        munmap(memory_page, PAGE_SIZE);
-        memory_page = NULL;
-        free_list = NULL;
+        if (munmap(memory_page, PAGE_SIZE) == 0) {
+            memory_page = NULL;
+            free_list = NULL;
+            return 0; // Éxito
+        }
+        return -1; // Error en munmap
     }
+    return 0; // Nada que limpiar
 }
 
 void *alloc(int size) {

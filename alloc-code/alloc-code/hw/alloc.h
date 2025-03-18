@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 int init_alloc();
-void cleanup();
+int cleanup();
 void *alloc(int size);
 void dealloc(void *ptr);
 
