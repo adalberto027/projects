@@ -4,3 +4,4 @@ gcc T0_Test.c -o T0_Test
 ps -o pid,vsz,rss,cmd -p <PID>
 
 cat /proc/<PID>/status | grep -E 'VmSize|VmRSS'
+
