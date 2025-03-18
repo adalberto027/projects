@@ -1,103 +1,111 @@
 #include "alloc.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <string.h>
 
-typedef struct FreeBlock {
-    size_t size;
-    struct FreeBlock *next;
-} FreeBlock;
+// Data structure to track memory blocks
+struct mem_block {
+    int offset;
+    int size;
+    int free;
+    struct mem_block *next;
+};
 
-static void *memory_page = NULL;
-static FreeBlock *free_list = NULL;
+static char *memory = NULL; // pointer to 4KB memory
+static struct mem_block *head = NULL;
 
+// Initialize memory manager
 int init_alloc() {
-    memory_page = mmap(NULL, PAGESIZE, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    if (memory_page == MAP_FAILED) {
-        perror("mmap failed");
+    memory = mmap(NULL, PAGESIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+    if (memory == MAP_FAILED)
         return -1;
-    }
-    free_list = (FreeBlock *)memory_page;
-    free_list->size = PAGESIZE - sizeof(FreeBlock);
-    free_list->next = NULL;
+
+    head = malloc(sizeof(struct mem_block));
+    if (!head)
+        return -1;
+
+    head->offset = 0;
+    head->size = PAGESIZE;
+    head->free = 1;
+    head->next = NULL;
+
     return 0;
 }
 
+// Cleanup memory manager
 int cleanup() {
-    if (memory_page) {
-        if (munmap(memory_page, PAGESIZE) == 0) {
-            memory_page = NULL;
-            free_list = NULL;
-            return 0; // Success
-        }
-        return -1; // Error in munmap
+    struct mem_block *temp;
+    while (head) {
+        temp = head;
+        head = head->next;
+        free(temp);
     }
-    return 0; // Nothing to clean up
+
+    if (munmap(memory, PAGESIZE) == -1)
+        return -1;
+
+    return 0;
 }
 
+// Allocate memory
 char *alloc(int size) {
-    if (size <= 0 || size % MINALLOC != 0 || size > PAGESIZE) {
-        printf("Invalid allocation request: %d bytes\n", size);
+    if (size <= 0 || size % MINALLOC != 0)
         return NULL;
-    }
 
-    FreeBlock *prev = NULL;
-    FreeBlock *curr = free_list;
+    struct mem_block *current = head;
+    while (current) {
+        if (current->free && current->size >= size) {
+            if (current->size > size) {
+                struct mem_block *new_block = malloc(sizeof(struct mem_block));
+                if (!new_block)
+                    return NULL;
 
-    while (curr) {
-        if (curr->size >= size) {
-            if (curr->size > size + sizeof(FreeBlock)) {
-                FreeBlock *new_block = (FreeBlock *)((char *)curr + sizeof(FreeBlock) + size);
-                new_block->size = curr->size - size - sizeof(FreeBlock);
-                new_block->next = curr->next;
+                new_block->offset = current->offset + size;
+                new_block->size = current->size - size;
+                new_block->free = 1;
+                new_block->next = current->next;
 
-                if (prev) {
-                    prev->next = new_block;
-                } else {
-                    free_list = new_block;
-                }
-                curr->size = size;
+                current->size = size;
+                current->free = 0;
+                current->next = new_block;
             } else {
-                if (prev) {
-                    prev->next = curr->next;
-                } else {
-                    free_list = curr->next;
-                }
+                current->free = 0;
             }
-
-            printf("Allocated %d bytes at: %p\n", size, (void *)((char *)curr + sizeof(FreeBlock)));
-            return (char *)((char *)curr + sizeof(FreeBlock));
+            return memory + current->offset;
         }
-        prev = curr;
-        curr = curr->next;
+        current = current->next;
     }
-    
-    printf("Allocation failed for %d bytes\n", size);
+
     return NULL;
 }
 
-void dealloc(char *ptr) {
-    if (!ptr || ptr < (char *)memory_page || ptr >= (char *)memory_page + PAGESIZE) {
-        printf("Invalid dealloc request at: %p\n", ptr);
-        return;
-    }
+// Merge adjacent free blocks
+void merge_free_blocks() {
+    struct mem_block *current = head;
 
-    printf("Freeing memory at: %p\n", ptr);
-    FreeBlock *block = (FreeBlock *)((char *)ptr - sizeof(FreeBlock));
-    block->next = free_list;
-    free_list = block;
-
-    // Merge adjacent free blocks
-    FreeBlock *current = free_list;
     while (current && current->next) {
-        if ((char *)current + current->size + sizeof(FreeBlock) == (char *)current->next) {
-            current->size += current->next->size + sizeof(FreeBlock);
-            current->next = current->next->next;
+        if (current->free && current->next->free) {
+            struct mem_block *next_block = current->next;
+            current->size += next_block->size;
+            current->next = next_block->next;
+            free(next_block);
         } else {
             current = current->next;
         }
+    }
+}
+
+// Deallocate memory
+void dealloc(char *ptr) {
+    if (!ptr || ptr < memory || ptr >= memory + PAGESIZE)
+        return;
+
+    struct mem_block *current = head;
+    int offset = ptr - memory;
+
+    while (current) {
+        if (current->offset == offset) {
+            current->free = 1;
+            merge_free_blocks();
+            return;
+        }
+        current = current->next;
     }
 }
