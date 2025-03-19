@@ -153,57 +153,52 @@ int main()
 		printf("Test5 failed\n");
 	///////////////////////////
 
-    /*** Test 6: Allocation of smallest possible chunk ***/
-    char *small1 = alloc(8);
-    char *small2 = alloc(8);
+    /*** Nuevo Test 6: Verifica máximo número de bloques posibles ***/
+    char *blocks[512];
+    int success_allocs = 0;
 
-    if (small1 != NULL && small2 != NULL) {
-        printf("Test 6 passed: Allocated two 8-byte chunks successfully\n");
-    } else {
-        printf("Test 6 failed: Could not allocate 8-byte chunks\n");
-    }
-
-    dealloc(small1);
-    dealloc(small2);
-
-    /*** Test 7: Allocate memory until full ***/
-    int num_allocs = 0;
-    char *blocks[512]; // 512 * 8 = 4096 bytes
     for (int i = 0; i < 512; i++) {
         blocks[i] = alloc(8);
-        if (blocks[i] == NULL) {
+        if (blocks[i] != NULL)
+            success_allocs++;
+        else
             break;
-        }
-        num_allocs++;
     }
 
-    if (num_allocs == 512) {
-        printf("Test 7 passed: Successfully allocated entire 4KB memory in 8-byte chunks\n");
-    } else {
-        printf("Test 7 failed: Could not allocate entire memory (%d allocations)\n", num_allocs);
-    }
+    if (success_allocs == 512)
+        printf("Nuevo Test 6 passed: Allocated all 512 blocks successfully\n");
+    else
+        printf("Nuevo Test 6 failed: Only allocated %d/512 blocks\n", success_allocs);
 
-    // Dealloc all to test complete memory release
-    for (int i = 0; i < num_allocs; i++) {
+    // Limpieza
+    for (int i = 0; i < success_allocs; i++)
         dealloc(blocks[i]);
-    }
 
-    /*** Test 8: Allocate and deallocate alternating blocks ***/
-    char *alt1 = alloc(256);
-    char *alt2 = alloc(512);
-    char *alt3 = alloc(256);
-    dealloc(alt2); // Liberar el bloque de 512
-    char *alt4 = alloc(512); // Debe tomar el mismo espacio de alt2
+    /*** Nuevo Test 7: Fragmentación y recombinación ***/
+    char *a = alloc(1024);
+    char *b = alloc(1024);
+    char *c = alloc(1024);
+    char *d = alloc(1024);
 
-    if (alt4 == alt2) {
-        printf("Test 8 passed: Successfully reused deallocated memory\n");
-    } else {
-        printf("Test 8 failed: Did not reuse previously freed block\n");
-    }
+    if (a && b && c && d)
+        printf("Nuevo Test 7a passed: 4 bloques de 1024 bytes asignados\n");
+    else
+        printf("Nuevo Test 7a failed\n");
 
-    dealloc(alt1);
-    dealloc(alt3);
-    dealloc(alt4);
+    dealloc(b);
+    dealloc(c);
+
+    char *e = alloc(2048); // Debería poder asignarse en el lugar combinado de b y c
+    if (e)
+        printf("Nuevo Test 7b passed: Combinación de bloques libres exitosa\n");
+    else
+        printf("Nuevo Test 7b failed: No pudo asignar 2048 bytes después de combinar\n");
+
+    // Limpieza final
+    dealloc(a);
+    dealloc(d);
+    dealloc(e);
+
 
 
 
