@@ -153,19 +153,24 @@ int main()
 		printf("Test5 failed\n");
 	///////////////////////////
 
-    /*** Test 6: Allocate and free repeatedly ***/
-    char *ptr1 = alloc(64);
-    char *ptr2 = alloc(128);
-    char *ptr3 = alloc(256);
+	// Test 6: Free a 128-byte block and allocate again to verify reuse of freed memory.
 
-    if (ptr1 && ptr2 && ptr3)
-        printf("Test 6 passed: Allocated blocks of 64, 128, and 256 bytes\n");
-    else
-        printf("Test 6 failed: Could not allocate blocks\n");
+	char *ptr1 = alloc(64);
+	char *ptr2 = alloc(128);
+	char *ptr3 = alloc(256);
 
-    dealloc(ptr1);
-    dealloc(ptr2);
-    dealloc(ptr3);
+	dealloc(ptr2); // Free 128-byte block
+
+	char *ptr4 = alloc(128); // Attempt to reuse freed 128-byte block
+
+	if (ptr4 == ptr2)
+		printf("Test 6 passed: Successfully reused freed block of 128 bytes\n");
+	else
+		printf("Test 6 failed: Did not reuse expected freed block\n");
+
+	dealloc(ptr1);
+	dealloc(ptr3);
+	dealloc(ptr4);
 
     /*** Test 7: Merge and re-split blocks ***/
     char *a = alloc(1024);
