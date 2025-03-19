@@ -7,7 +7,7 @@
 #define PAGESIZE 4096
 #define MINALLOC 8
 
-// Estructura para gestionar los bloques de memoria
+// Structure to manage memory blocks
 struct mem_block {
     int offset;
     int size;
@@ -18,7 +18,7 @@ struct mem_block {
 static char *memory = NULL;
 static struct mem_block *head = NULL;
 
-// Inicializa el administrador de memoria
+// Initializes the memory manager
 int init_alloc() {
     memory = mmap(NULL, PAGESIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
     if (memory == MAP_FAILED)
@@ -36,7 +36,7 @@ int init_alloc() {
     return 0;
 }
 
-// Libera el administrador de memoria
+// Cleans up the memory manager
 int cleanup() {
     struct mem_block *temp;
     while (head) {
@@ -51,7 +51,7 @@ int cleanup() {
     return 0;
 }
 
-// Fusiona bloques libres adyacentes
+// Merges adjacent free blocks
 void merge_free_blocks() {
     struct mem_block *current = head;
     while (current && current->next) {
@@ -66,7 +66,7 @@ void merge_free_blocks() {
     }
 }
 
-// Asigna memoria
+// Allocates memory
 char *alloc(int size) {
     if (size <= 0 || size % MINALLOC != 0)
         return NULL;
@@ -74,7 +74,7 @@ char *alloc(int size) {
     struct mem_block *current = head;
     while (current) {
         if (current->free && current->size >= size) {
-            if (current->size > size + sizeof(struct mem_block)) {
+            if (current->size > size + MINALLOC) { // Change from sizeof(struct mem_block) to MINALLOC to avoid fragmentation
                 struct mem_block *new_block = mmap(NULL, sizeof(struct mem_block), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
                 if (new_block == MAP_FAILED)
                     return NULL;
@@ -98,7 +98,7 @@ char *alloc(int size) {
     return NULL;
 }
 
-// Libera memoria asignada
+// Frees allocated memory
 void dealloc(char *ptr) {
     if (!ptr || ptr < memory || ptr >= memory + PAGESIZE)
         return;
