@@ -157,4 +157,48 @@ int main()
 	if(cleanup())
 		return 1;	//munmap failed
 	return 0;
+
+	/*** New test cases ***/ //here
+
+	/*** Test 6: Allocate maximum memory in small chunks ***/ //here
+	char *small_chunks[512]; //here
+	int i; //here
+	for(i = 0; i < 512; i++) //here
+	{
+		small_chunks[i] = alloc(8); //here
+		if(small_chunks[i] == NULL) //here
+		{
+			printf("Test 6 failed: Could not allocate 8-byte chunk at index %d\n", i); //here
+			break; //here
+		}
+	}
+
+	if(i == 512) //here
+		printf("Test 6 passed: Allocated 512 chunks of 8 bytes each\n"); //here
+
+	for(int j = 0; j < i; j++) //here
+		dealloc(small_chunks[j]); //here
+
+	/*** Test 7: Fragmentation Handling ***/ //here
+	char *frag1 = alloc(256); //here
+	char *frag2 = alloc(256); //here
+	char *frag3 = alloc(256); //here
+	dealloc(frag2); //here
+	char *frag4 = alloc(128); //here
+	char *frag5 = alloc(128); //here
+
+	if(frag4 != NULL && frag5 != NULL) //here
+		printf("Test 7 passed: Fragmentation handled correctly\n"); //here
+	else
+		printf("Test 7 failed: Could not reuse fragmented memory\n"); //here
+
+	dealloc(frag1); //here
+	dealloc(frag3); //here
+	dealloc(frag4); //here
+	dealloc(frag5); //here
+
+	if(cleanup())
+		return 1; // munmap failed
+
+	return 0;
 }
