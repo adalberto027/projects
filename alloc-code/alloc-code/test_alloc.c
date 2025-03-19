@@ -152,67 +152,62 @@ int main()
 	else
 		printf("Test5 failed\n");
 	///////////////////////////
-
-	// Test 6: Free a 128-byte block and allocate again to verify reuse of freed memory.
-
+	// Test 6: Checks if allocator correctly reuses a previously freed 128-byte block.
 	char *ptr1 = alloc(64);
 	char *ptr2 = alloc(128);
 	char *ptr3 = alloc(256);
 
-	dealloc(ptr2); // Free 128-byte block
+	dealloc(ptr2);
 
-	char *ptr4 = alloc(128); // Attempt to reuse freed 128-byte block
+	char *ptr4 = alloc(128);
 
 	if (ptr4 == ptr2)
-		printf("Test 6 passed: Successfully reused freed block of 128 bytes\n");
+		printf("Test 6 passed: Successfully reused freed 128-byte block\n");
 	else
-		printf("Test 6 failed: Did not reuse expected freed block\n");
+		printf("Test 6 failed: Did not reuse the expected freed block\n");
 
 	dealloc(ptr1);
 	dealloc(ptr3);
 	dealloc(ptr4);
 
-    /*** Test 7: Merge and re-split blocks ***/
-    char *a = alloc(1024);
-    char *b = alloc(1024);
-    char *c = alloc(2048);
+	// Test 7: Verifies that two adjacent freed blocks merge correctly into a larger block.
+	char *a = alloc(1024);
+	char *b = alloc(1024);
+	char *c = alloc(2048);
 
-    // Libera los dos primeros bloques para crear uno grande combinado
-    dealloc(a);
-    dealloc(b);
+	dealloc(a);
+	dealloc(b);
 
-    char *d = alloc(2048);
-    if (d == a)
-        printf("Test 7 passed: Merged two 1024-byte blocks successfully into one 2048-byte block\n");
-    else
-        printf("Test 7 failed: Merging did not work as expected\n");
+	char *d = alloc(2048);
 
-    // Limpieza final
-    dealloc(c);
-    dealloc(d);
-    /*** Test 8: Allocate and deallocate alternating blocks ***/
-    char *alt1 = alloc(256);
-    char *alt2 = alloc(512);
-    char *alt3 = alloc(256);
-    dealloc(alt2); // Liberar el bloque de 512
-    char *alt4 = alloc(512); // Debe tomar el mismo espacio de alt2
+	if (d == a)
+		printf("Test 7 passed: Successfully merged two 1024-byte blocks into one 2048-byte block\n");
+	else
+		printf("Test 7 failed: Block merging did not work as expected\n");
 
-    if (alt4 == alt2) {
-        printf("Test 8 passed: Successfully reused deallocated memory\n");
-    } else {
-        printf("Test 8 failed: Did not reuse previously freed block\n");
-    }
+	dealloc(c);
+	dealloc(d);
 
-    dealloc(alt1);
-    dealloc(alt3);
-    dealloc(alt4);
+	// Test 8: Checks if allocator correctly handles alternating allocation and deallocation.
+	char *alt1 = alloc(256);
+	char *alt2 = alloc(512);
+	char *alt3 = alloc(256);
 
+	dealloc(alt2);
 
+	char *alt4 = alloc(512);
 
+	if (alt4 == alt2)
+		printf("Test 8 passed: Successfully reused previously freed 512-byte block\n");
+	else
+		printf("Test 8 failed: Did not reuse previously freed block\n");
 
+	dealloc(alt1);
+	dealloc(alt3);
+	dealloc(alt4);
 
-	if(cleanup())
-		return 1; // munmap failed
+	if (cleanup())
+		return 1;
 
 	return 0;
 }
