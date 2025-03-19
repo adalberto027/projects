@@ -74,7 +74,7 @@ char *alloc(int size) {
     struct mem_block *current = head;
     while (current) {
         if (current->free && current->size >= size) {
-            if (current->size >= size + MINALLOC) { // Minimal fix here
+            if (current->size >= size + (int)sizeof(struct mem_block)) {
                 struct mem_block *new_block = mmap(NULL, sizeof(struct mem_block), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
                 if (new_block == MAP_FAILED)
                     return NULL;
