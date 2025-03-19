@@ -152,43 +152,70 @@ int main()
 	else
 		printf("Test5 failed\n");
 	///////////////////////////
-
-	/*** Test 6: Allocate maximum memory in small chunks ***/ //here
-	char *small_chunks[512]; //here
-	int i; //here
-	for(i = 0; i < 512; i++) //here
+	/*** Test 6: Allocate maximum memory in small chunks ***/
+	char *small_chunks[512];
+	int i;
+	for(i = 0; i < 512; i++)
 	{
-		small_chunks[i] = alloc(8); //here
-		if(small_chunks[i] == NULL) //here
+		small_chunks[i] = alloc(8);
+		if(small_chunks[i] == NULL)
 		{
-			printf("Test 6 failed: Could not allocate 8-byte chunk at index %d\n", i); //here
-			break; //here
+			printf("Test 6 failed: Could not allocate 8-byte chunk at index %d\n", i);
+			break;
 		}
 	}
 
-	if(i == 512) //here
-		printf("Test 6 passed: Allocated 512 chunks of 8 bytes each\n"); //here
+	if(i == 512)
+		printf("Test 6 passed: Allocated 512 chunks of 8 bytes each\n");
 
-	for(int j = 0; j < i; j++) //here
-		dealloc(small_chunks[j]); //here
+	for(int j = 0; j < i; j++)
+		dealloc(small_chunks[j]);
 
-	/*** Test 7: Fragmentation Handling ***/ //here
-	char *frag1 = alloc(256); //here
-	char *frag2 = alloc(256); //here
-	char *frag3 = alloc(256); //here
-	dealloc(frag2); //here
-	char *frag4 = alloc(128); //here
-	char *frag5 = alloc(128); //here
+	/*** Test 7: Fragmentation Handling ***/
+	char *frag1 = alloc(256);
+	char *frag2 = alloc(256);
+	char *frag3 = alloc(256);
+	dealloc(frag2);
+	char *frag4 = alloc(128);
+	char *frag5 = alloc(128);
 
-	if(frag4 != NULL && frag5 != NULL) //here
-		printf("Test 7 passed: Fragmentation handled correctly\n"); //here
+	if(frag4 != NULL && frag5 != NULL)
+		printf("Test 7 passed: Fragmentation handled correctly\n");
 	else
-		printf("Test 7 failed: Could not reuse fragmented memory\n"); //here
+		printf("Test 7 failed: Could not reuse fragmented memory\n");
 
-	dealloc(frag1); //here
-	dealloc(frag3); //here
-	dealloc(frag4); //here
-	dealloc(frag5); //here
+	dealloc(frag1);
+	dealloc(frag3);
+	dealloc(frag4);
+	dealloc(frag5);
+
+	/*** Test 8: Mixed Allocations Stress Test ***/
+	char *mix1 = alloc(128);
+	char *mix2 = alloc(256);
+	char *mix3 = alloc(512);
+	char *mix4 = alloc(128);
+
+	if(mix1 && mix2 && mix3 && mix4)
+		printf("Test 8 passed: Successfully allocated mixed sizes\n");
+	else
+		printf("Test 8 failed: Could not allocate mixed sizes\n");
+
+	dealloc(mix2);
+	dealloc(mix4);
+
+	char *mix5 = alloc(256);
+	char *mix6 = alloc(128);
+
+	if(mix5 && mix6)
+		printf("Test 8 passed: Successfully reused memory after deallocation\n");
+	else
+		printf("Test 8 failed: Memory reuse failed\n");
+
+	dealloc(mix1);
+	dealloc(mix3);
+	dealloc(mix5);
+	dealloc(mix6);
+
 
 	if(cleanup())
 		return 1; // munmap failed
