@@ -153,13 +153,6 @@ int main()
 		printf("Test5 failed\n");
 	///////////////////////////
 
-	
-	if(cleanup())
-		return 1;	//munmap failed
-	return 0;
-
-	/*** New test cases ***/ //here
-
 	/*** Test 6: Allocate maximum memory in small chunks ***/ //here
 	char *small_chunks[512]; //here
 	int i; //here
