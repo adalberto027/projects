@@ -152,69 +152,61 @@ int main()
 	else
 		printf("Test5 failed\n");
 	///////////////////////////
-	/*** Test 6: Allocate maximum memory in small chunks ***/
-	char *small_chunks[512];
-	int i;
-	for(i = 0; i < 512; i++)
-	{
-		small_chunks[i] = alloc(8);
-		if(small_chunks[i] == NULL)
-		{
-			printf("Test 6 failed: Could not allocate 8-byte chunk at index %d\n", i);
-			break;
-		}
-	}
 
-	if(i == 512)
-		printf("Test 6 passed: Allocated 512 chunks of 8 bytes each\n");
+    /*** Test 6: Allocation of smallest possible chunk ***/
+    char *small1 = alloc(8);
+    char *small2 = alloc(8);
 
-	for(int j = 0; j < i; j++)
-		dealloc(small_chunks[j]);
+    if (small1 != NULL && small2 != NULL) {
+        printf("Test 6 passed: Allocated two 8-byte chunks successfully\n");
+    } else {
+        printf("Test 6 failed: Could not allocate 8-byte chunks\n");
+    }
 
-	/*** Test 7: Fragmentation Handling ***/
-	char *frag1 = alloc(256);
-	char *frag2 = alloc(256);
-	char *frag3 = alloc(256);
-	dealloc(frag2);
-	char *frag4 = alloc(128);
-	char *frag5 = alloc(128);
+    dealloc(small1);
+    dealloc(small2);
 
-	if(frag4 != NULL && frag5 != NULL)
-		printf("Test 7 passed: Fragmentation handled correctly\n");
-	else
-		printf("Test 7 failed: Could not reuse fragmented memory\n");
+    /*** Test 7: Allocate memory until full ***/
+    int num_allocs = 0;
+    char *blocks[512]; // 512 * 8 = 4096 bytes
+    for (int i = 0; i < 512; i++) {
+        blocks[i] = alloc(8);
+        if (blocks[i] == NULL) {
+            break;
+        }
+        num_allocs++;
+    }
 
-	dealloc(frag1);
-	dealloc(frag3);
-	dealloc(frag4);
-	dealloc(frag5);
+    if (num_allocs == 512) {
+        printf("Test 7 passed: Successfully allocated entire 4KB memory in 8-byte chunks\n");
+    } else {
+        printf("Test 7 failed: Could not allocate entire memory (%d allocations)\n", num_allocs);
+    }
 
-	/*** Test 8: Mixed Allocations Stress Test ***/
-	char *mix1 = alloc(128);
-	char *mix2 = alloc(256);
-	char *mix3 = alloc(512);
-	char *mix4 = alloc(128);
+    // Dealloc all to test complete memory release
+    for (int i = 0; i < num_allocs; i++) {
+        dealloc(blocks[i]);
+    }
 
-	if(mix1 && mix2 && mix3 && mix4)
-		printf("Test 8 passed: Successfully allocated mixed sizes\n");
-	else
-		printf("Test 8 failed: Could not allocate mixed sizes\n");
+    /*** Test 8: Allocate and deallocate alternating blocks ***/
+    char *alt1 = alloc(256);
+    char *alt2 = alloc(512);
+    char *alt3 = alloc(256);
+    dealloc(alt2); // Liberar el bloque de 512
+    char *alt4 = alloc(512); // Debe tomar el mismo espacio de alt2
 
-	dealloc(mix2);
-	dealloc(mix4);
+    if (alt4 == alt2) {
+        printf("Test 8 passed: Successfully reused deallocated memory\n");
+    } else {
+        printf("Test 8 failed: Did not reuse previously freed block\n");
+    }
 
-	char *mix5 = alloc(256);
-	char *mix6 = alloc(128);
+    dealloc(alt1);
+    dealloc(alt3);
+    dealloc(alt4);
 
-	if(mix5 && mix6)
-		printf("Test 8 passed: Successfully reused memory after deallocation\n");
-	else
-		printf("Test 8 failed: Memory reuse failed\n");
 
-	dealloc(mix1);
-	dealloc(mix3);
-	dealloc(mix5);
-	dealloc(mix6);
+
 
 
 	if(cleanup())
