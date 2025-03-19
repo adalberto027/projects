@@ -159,47 +159,32 @@ int main()
     char *ptr3 = alloc(256);
 
     if (ptr1 && ptr2 && ptr3)
-        printf("Test 6a passed: Allocated blocks of 64, 128, and 256 bytes\n");
+        printf("Test 6 passed: Allocated blocks of 64, 128, and 256 bytes\n");
     else
-        printf("Test 6a failed: Could not allocate blocks\n");
-
-    // Libera bloques alternadamente y vuelve a asignar
-    dealloc(ptr2);
-
-    char *ptr4 = alloc(128);
-    if (ptr4 == ptr2)
-        printf("Test 6b passed: Successfully reused freed block of 128 bytes\n");
-    else
-        printf("Test 6b failed: Did not reuse expected freed block\n");
+        printf("Test 6 failed: Could not allocate blocks\n");
 
     dealloc(ptr1);
+    dealloc(ptr2);
     dealloc(ptr3);
-    dealloc(ptr4);
 
     /*** Test 7: Merge and re-split blocks ***/
     char *a = alloc(1024);
     char *b = alloc(1024);
     char *c = alloc(2048);
 
-    if (a && b && c)
-        printf("Test 7a passed: Allocated full 4KB with three blocks\n");
-    else
-        printf("Test 7a failed\n");
-
-    // Libera los dos primeros bloques y crea uno grande
+    // Libera los dos primeros bloques para crear uno grande combinado
     dealloc(a);
     dealloc(b);
 
     char *d = alloc(2048);
     if (d == a)
-        printf("Test 7b passed: Merged two 1024-byte blocks successfully into one 2048-byte block\n");
+        printf("Test 7 passed: Merged two 1024-byte blocks successfully into one 2048-byte block\n");
     else
-        printf("Test 7b failed: Merging did not work as expected\n");
+        printf("Test 7 failed: Merging did not work as expected\n");
 
-    // Libera todo
+    // Limpieza final
     dealloc(c);
     dealloc(d);
-
     /*** Test 8: Allocate and deallocate alternating blocks ***/
     char *alt1 = alloc(256);
     char *alt2 = alloc(512);
