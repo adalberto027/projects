@@ -7,7 +7,7 @@
 #define PAGESIZE 4096
 #define MINALLOC 8
 
-// Structure to manage memory blocks
+// structure to manage memory blocks
 struct mem_block {
     int offset;
     int size;
@@ -18,7 +18,7 @@ struct mem_block {
 static char *memory = NULL;
 static struct mem_block *head = NULL;
 
-// Initialize the memory manager
+// initialize the memory manager
 int init_alloc() {
     memory = mmap(NULL, PAGESIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
     if (memory == MAP_FAILED)
@@ -36,7 +36,7 @@ int init_alloc() {
     return 0;
 }
 
-// Cleanup memory manager
+// cleanup memory manager
 int cleanup() {
     struct mem_block *temp;
     while (head) {
@@ -51,7 +51,7 @@ int cleanup() {
     return 0;
 }
 
-// Merge adjacent free blocks
+// merge adjacent free blocks
 void merge_free_blocks() {
     struct mem_block *current = head;
     while (current && current->next) {
@@ -66,7 +66,7 @@ void merge_free_blocks() {
     }
 }
 
-// Allocate memory
+// allocate memory
 char *alloc(int size) {
     if (size <= 0 || size % MINALLOC != 0)
         return NULL;
@@ -98,7 +98,7 @@ char *alloc(int size) {
     return NULL;
 }
 
-// Free allocated memory
+// free allocated memory
 void dealloc(char *ptr) {
     if (!ptr || ptr < memory || ptr >= memory + PAGESIZE)
         return;

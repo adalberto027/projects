@@ -7,6 +7,11 @@
 #include <wait.h>
 #include <pthread.h>
 
+//How to Compile and Run
+//gcc -pthread -o master-worker master-worker.c
+//Run the program with:
+//./master-worker <total_items> <max_buf_size> <num_workers> <num_masters>
+
 int item_to_produce, curr_buf_size;
 int total_items, max_buf_size, num_workers, num_masters;
 
@@ -57,15 +62,15 @@ void *generate_requests_loop(void *data)
 
 //write function to be run by worker threads
 //ensure that the workers call the function print_consumed when they consume an item
-// NEW: worker function
+// worker function
 void *consume_requests_loop(void *data) {
   int thread_id = *((int *)data);
 
   while (1) {
-    pthread_mutex_lock(&mutex); // NEW: lock buffer
+    pthread_mutex_lock(&mutex); // this is a lock buffer
 
     while (curr_buf_size == 0 && item_to_produce < total_items) {
-      pthread_cond_wait(&cond_consume, &mutex); // NEW: wait if buffer empty
+      pthread_cond_wait(&cond_consume, &mutex); // this line wait if buffer empty
     }
 
     if (curr_buf_size == 0 && item_to_produce >= total_items) {
@@ -76,7 +81,7 @@ void *consume_requests_loop(void *data) {
     int item = buffer[--curr_buf_size];
     print_consumed(item, thread_id);
 
-    pthread_cond_signal(&cond_produce); // NEW: signal producer
+    pthread_cond_signal(&cond_produce); // this is a signal producer
     pthread_mutex_unlock(&mutex);
   }
   return 0;
@@ -104,7 +109,7 @@ int main(int argc, char *argv[])
 
    buffer = (int *)malloc (sizeof(int) * max_buf_size);
 
-   // NEW: init sync primitives
+   // init sync primitives
    pthread_mutex_init(&mutex, NULL);
    pthread_cond_init(&cond_produce, NULL);
    pthread_cond_init(&cond_consume, NULL);
@@ -119,7 +124,7 @@ int main(int argc, char *argv[])
     pthread_create(&master_thread[i], NULL, generate_requests_loop, (void *)&master_thread_id[i]);
 
   //create worker consumer threads
-  // NEW: create worker threads
+  // create worker threads
   pthread_t *worker_threads = (pthread_t *)malloc(sizeof(pthread_t) * num_workers);
   int *worker_thread_ids = (int *)malloc(sizeof(int) * num_workers);
   for (i = 0; i < num_workers; i++) {
@@ -134,21 +139,21 @@ int main(int argc, char *argv[])
       printf("master %d joined\n", i);
     }
 
-  // NEW: join worker threads
+  // join worker threads
   for (i = 0; i < num_workers; i++) {
     pthread_join(worker_threads[i], NULL);
     printf("worker %d joined\n", i);
   }
 
   /*----Deallocating Buffers---------------------*/
-  pthread_mutex_destroy(&mutex); // NEW: destroy mutex
-  pthread_cond_destroy(&cond_produce); // NEW: destroy cond vars
+  pthread_mutex_destroy(&mutex); // destroy mutex
+  pthread_cond_destroy(&cond_produce); // destroy cond vars
   pthread_cond_destroy(&cond_consume);
 
   free(buffer);
   free(master_thread_id);
   free(master_thread);
-  free(worker_threads); // NEW: free worker memory
+  free(worker_threads); // free worker memory
   free(worker_thread_ids);
 
   return 0;
